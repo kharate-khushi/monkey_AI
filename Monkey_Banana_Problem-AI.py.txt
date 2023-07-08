@@ -1,0 +1,191 @@
+'''
+Monkey Banana Problem is stated as given: A monkey and a bunch of banana
+are present in a room. The bananas are hanging from the ceiling. The monkey
+cannot reach the bananas directly. However, in the room there is one chair and
+a stick. The monkey can reach the banana standing on the chair. The aim of the
+problem is to find the sequence of events by which monkey can reach the
+bananas
+Find out total number of moves required for Breadth First Search, Depth First
+Search, Uniform Cost Search, Best First Search and A* Algorithm. Define
+appropriate heuristic for solving the problem.
+'''
+
+from collections import deque
+import math
+
+# Function to calculate the Euclidean distance between two points
+def calculate_distance(point1, point2):
+    x1, y1 = point1
+    x2, y2 = point2
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+# Function to check if the current state is a goal state
+def is_goal_state(state, target_position, chair_count, stick_count):
+    monkey_position, _, _ = state
+    return monkey_position == target_position
+
+# Function to generate all possible valid moves from the current state
+def generate_moves(state, target_position, chair_count, stick_count):
+    monkey_position, _, _ = state
+    moves = []
+
+    # Add move: Monkey moves one step up
+    if monkey_position[0] > 0:
+        moves.append(((monkey_position[0] - 1, monkey_position[1]), chair_count, stick_count))
+
+    # Add move: Monkey moves one step down
+    if monkey_position[0] < target_position[0]:
+        moves.append(((monkey_position[0] + 1, monkey_position[1]), chair_count, stick_count))
+
+    # Add move: Monkey moves one step left
+    if monkey_position[1] > 0:
+        moves.append(((monkey_position[0], monkey_position[1] - 1), chair_count, stick_count))
+
+    # Add move: Monkey moves one step right
+    if monkey_position[1] < target_position[1]:
+        moves.append(((monkey_position[0], monkey_position[1] + 1), chair_count, stick_count))
+
+    # Add move: Monkey uses a chair to climb up
+    if chair_count > 0 and monkey_position[0] > 0:
+        moves.append(((monkey_position[0] - 1, monkey_position[1]), chair_count - 1, stick_count))
+    
+    # Add move: Monkey uses a stick to reach the banana on the ceiling
+    if stick_count > 0 and monkey_position[0] < target_position[0]:
+        moves.append(((monkey_position[0] + 1, monkey_position[1]), chair_count, stick_count - 1))
+
+    return moves
+
+# Breadth First Search algorithm
+def bfs(initial_state, target_position, chair_count, stick_count):
+    queue = deque()
+    queue.append({'state': initial_state, 'moves': 0})
+    
+    while queue:
+        current = queue.popleft()
+        current_state = current['state']
+        current_moves = current['moves']
+        
+        if is_goal_state(current_state, target_position, chair_count, stick_count):
+            return current_moves
+        
+        next_moves = current_moves + 1
+        possible_moves = generate_moves(current_state, target_position, chair_count, stick_count)
+        
+        for move in possible_moves:
+            queue.append({'state': move, 'moves': next_moves})
+    
+    return -1  # If no solution is found
+
+# Depth First Search algorithm
+def dfs(current_state, current_moves, max_depth, target_position, chair_count, stick_count):
+    if is_goal_state(current_state, target_position, chair_count, stick_count):
+        return current_moves
+    
+    if current_moves == 0 or current_moves > max_depth:
+        return -1
+    
+    possible_moves = generate_moves(current_state, target_position, chair_count, stick_count)
+    
+    for move in possible_moves:
+        result = dfs(move, current_moves - 1, max_depth, target_position, chair_count, stick_count)
+        if result != -1:
+            return result
+    
+    return -1  # If no solution is found
+
+# Uniform Cost Search algorithm
+def ucs(initial_state, target_position, chair_count, stick_count):
+    queue = [(initial_state, 0)]
+    
+    while queue:
+        current_state, current_moves = queue.pop(0)
+        
+        if is_goal_state(current_state, target_position, chair_count, stick_count):
+            return current_moves
+        
+        next_moves = current_moves + 1
+        possible_moves = generate_moves(current_state, target_position, chair_count, stick_count) 
+        
+        for move in possible_moves:
+            queue.append((move, next_moves))
+    
+    return -1  # If no solution is found
+
+# Best First Search algorithm
+def best_first_search(initial_state, target_position, chair_count, stick_count, heuristic):
+    queue = [(initial_state, 0)]
+    
+    while queue:
+        queue.sort(key=lambda x: heuristic(x[0][0], target_position))  # Sort the queue based on heuristic value
+        current_state, current_moves = queue.pop(0)
+        
+        if is_goal_state(current_state, target_position, chair_count, stick_count):
+            return current_moves
+        
+        next_moves = current_moves + 1
+        possible_moves = generate_moves(current_state, target_position, chair_count, stick_count)
+        
+        for move in possible_moves:
+            queue.append((move, next_moves))
+    
+    return -1  # If no solution is found
+
+# A* Algorithm
+def a_star(initial_state, target_position, chair_count, stick_count, heuristic, cost_function):
+    queue = [(initial_state, 0, 0)]
+    
+    while queue:
+        queue.sort(key=lambda x: x[1] + x[2])  # Sort the queue based on f = g + h
+        current_state, current_moves, current_cost = queue.pop(0)
+        
+        if is_goal_state(current_state, target_position, chair_count, stick_count):
+            return current_moves
+        
+        next_moves = current_moves + 1
+        possible_moves = generate_moves(current_state, target_position, chair_count, stick_count)
+        
+        for move in possible_moves:
+            queue.append((move, next_moves, current_cost + cost_function(move)))
+    
+    return -1  # If no solution is found
+
+# Example usage:
+def heuristic(state, target_position):
+    return calculate_distance(state, target_position)
+
+def cost_function(state):
+    return 1
+
+# Prompt user for initial state
+monkey_row = int(input("Enter the monkey's row position: "))
+monkey_col = int(input("Enter the monkey's column position: "))
+initial_monkey_position = (monkey_row, monkey_col)
+
+# Prompt user for target position (banana)
+target_row = int(input("Enter the target row position (banana's row): "))
+target_col = int(input("Enter the target column position (banana's column): "))
+target_position = (target_row, target_col)
+
+chair_count = 1
+stick_count = 1
+
+# BFS
+total_moves_bfs = bfs((initial_monkey_position, chair_count, stick_count), target_position, chair_count, stick_count)
+print("BFS: Total moves =", total_moves_bfs)
+
+# DFS
+max_depth = int(input("Enter the maximum depth for DFS: "))
+total_moves_dfs = dfs((initial_monkey_position, chair_count, stick_count), max_depth, max_depth, target_position, chair_count, stick_count)
+print("DFS: Total moves =", total_moves_dfs)
+
+# UCS
+total_moves_ucs = ucs((initial_monkey_position, chair_count, stick_count), target_position, chair_count, stick_count)
+print("UCS: Total moves =", total_moves_ucs)
+
+# Best First Search
+total_moves_best_first = best_first_search((initial_monkey_position, chair_count, stick_count), target_position, chair_count, stick_count, heuristic)
+print("Best First Search: Total moves =", total_moves_best_first)
+
+# A* Algorithm
+total_moves_a_star = a_star((initial_monkey_position, chair_count, stick_count), target_position, chair_count, stick_count, heuristic, cost_function)
+print("A* Algorithm: Total moves =", total_moves_a_star)
